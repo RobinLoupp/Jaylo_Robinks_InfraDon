@@ -1,0 +1,45 @@
+services:
+    db: # Nom du service : ici notre base de données PostgreSQL
+        image: postgres:16
+        # L'image Docker officielle de PostgreSQL (version 16).
+        # Docker va télécharger et exécuter PostgreSQL dans un conteneur.
+
+        container_name: postgres-infradon-rj
+        # Le nom du conteneur (sinon Docker en génère un aléatoire).
+
+        environment:
+            POSTGRES_USER: postgres
+            # Nom d’utilisateur SUPERADMIN créé automatiquement dans PostgreSQL.
+            # C’est avec ce compte qu’on se connecte depuis VS Code ou psql.
+
+            POSTGRES_PASSWORD: motdepassethug
+            # Mot de passe pour l'utilisateur ci-dessus.
+
+            POSTGRES_DB: service_technique
+            # Nom de la base de données à créer automatiquement lorsque le
+            # conteneur démarre pour la première fois.
+            # → Les fichiers initdb/ seront exécutés DANS cette bases.
+
+        ports:
+            - "5432:5432"
+            # Format : "port_hôte:port_conteneur"
+            # 5432 = port par défaut de PostgreSQL dans le conteneur.
+            # 5436 = port sur ta machine.
+            # Tu te connectes à localhost:5436 depuis VS Code.
+
+        volumes:
+            - service_technique_data:/var/lib/postgresql/data
+            # Volume PERSISTANT où PostgreSQL stocke physiquement les données.
+            # Même si le conteneur est supprimé, les données restent.
+
+            - ./initdb:/docker-entrypoint-initdb.d
+            # Permet d’exécuter automatiquement les scripts .sql ou .sh
+            # au premier démarrage de la base.
+            # → C’est ici que tu mets 01-schema.sql et 02-data.sql.
+            # → Ils NE seront exécutés qu'une seule fois (si la db est vide).
+
+volumes:
+    service_technique_data:
+    # Déclare le volume Docker.
+    # Tout le contenu de /var/lib/postgresql/data sera stocké ici
+    # sur ton ordinateur.
