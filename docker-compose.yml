@@ -24,14 +24,15 @@ services:
             - "5432:5432"
             # Format : "port_hôte:port_conteneur"
             # 5432 = port par défaut de PostgreSQL dans le conteneur.
-            # 5436 = port sur ta machine.
+            # 5432 = port sur ta machine.
             # Tu te connectes à localhost:5436 depuis VS Code.
 
         volumes:
             - service_technique_data:/var/lib/postgresql/data
             # Volume PERSISTANT où PostgreSQL stocke physiquement les données.
             # Même si le conteneur est supprimé, les données restent.
-
+            - ./data_csv:/data
+            #import des data CSV de ma machine en local dans docker
             - ./initdb:/docker-entrypoint-initdb.d
             # Permet d’exécuter automatiquement les scripts .sql ou .sh
             # au premier démarrage de la base.
