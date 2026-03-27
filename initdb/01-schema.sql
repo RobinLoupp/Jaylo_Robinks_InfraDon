@@ -71,11 +71,11 @@ CREATE TABLE fournisseurs (
     email VARCHAR(255) UNIQUE,
     remarque TEXT,
     id_type_materiel INTEGER NOT NULL REFERENCES type_materiaux(id)
-
+);
 -- Inventaire (table centrale)
 CREATE TABLE inventaire (
     id SERIAL PRIMARY KEY,
-    id VARCHAR(100) UNIQUE NOT NULL, -- "ID" comme identifiant unique
+    numero VARCHAR(100) UNIQUE NOT NULL, -- "ID" comme identifiant unique
     date_installation DATE,
     remarque TEXT,
     id_fournisseurs INTEGER NOT NULL REFERENCES fournisseurs (id),
