@@ -25,7 +25,7 @@ CREATE TABLE statut_signalement (
 );
 
 -- table libelle de statut urgence, liée à la table SIGNALEMENT
-CREATE TABLE statut_urgence (
+CREATE TABLE urgence_signalement (
     id SERIAL PRIMARY KEY,
     statut VARCHAR(100) NOT NULL
 );

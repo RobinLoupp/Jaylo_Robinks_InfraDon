@@ -23,7 +23,7 @@ SELECT DISTINCT
         WHEN LOWER(TRIM(statut_signalement))LIKE '%fait%' THEN 'fait'
         WHEN LOWER(TRIM(statut_signalement))LIKE '%en attente %' THEN 'en attente'
         WHEN LOWER(TRIM(statut_signalement))LIKE '%en cours%' THEN 'en cours'
-        WHEN LOWER(TRIM(statut_signalement))LIKE '%NULL%' THEN ''
+        WHEN LOWER(TRIM(statut_signalement))LIKE '%NULL%' THEN 'non traité'
 
         ELSE NULL
     END
