@@ -51,13 +51,13 @@ CREATE TABLE type_inventaire (
 );
 
 -- table libelle de type_materiaux, liée à la table INVENTAIRE
-CREATE TABLE type_materiaux (
+CREATE TABLE materiaux_inventaire (
     id SERIAL PRIMARY KEY,
     type VARCHAR(100) NOT NULL
 );
 
 -- table libelle de type_materiels, liée à la table FOURNISSEURS
-CREATE TABLE type_materiels (
+CREATE TABLE materiels_fournisseurs (
     id SERIAL PRIMARY KEY,
     type_materiels VARCHAR(100) NOT NULL
 );
