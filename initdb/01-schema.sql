@@ -30,13 +30,6 @@ CREATE TABLE urgence_signalement (
     statut VARCHAR(100) NOT NULL
 );
 
--- table libelle de lieux inventaire, liée à la table INVENTAIRE
-CREATE TABLE lieux_inventaire (
-    id SERIAL PRIMARY KEY,
-    lieux VARCHAR(255) NOT NULL,
-    latitude DECIMAL(10, 8) NOT NULL,
-    longitude DECIMAL(11, 8) NOT NULL 
-);
 
 -- table libelle de etat_iventaire, liée à la table INVENTAIRE
 CREATE TABLE etat_inventaire (
@@ -78,6 +71,10 @@ CREATE TABLE inventaire (
     numero VARCHAR(100) UNIQUE NOT NULL, -- "ID" comme identifiant unique
     date_installation DATE,
     remarque TEXT,
+    lieux VARCHAR(255) NOT NULL,
+    -- Thibault: Vous pouvez convertir latitude + longitude en geom (un point qui prend les deux) ce qui permet de faire des calculs facilement par la suite.
+    latitude DECIMAL(10, 8) NOT NULL,
+    longitude DECIMAL(11, 8) NOT NULL 
     id_fournisseurs INTEGER NOT NULL REFERENCES fournisseurs (id),
     id_type_inventaire INTEGER NOT NULL REFERENCES type_inventaire (id),
     id_type_materiaux INTEGER NOT NULL REFERENCES type_materiaux (id),

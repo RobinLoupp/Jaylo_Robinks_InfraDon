@@ -1,5 +1,7 @@
 -- Nettoyage table type_... les petites tables
 
+-- Thibault: Manque INSERT pour réellement insérer dans les tables finales
+SELECT * FROM (
 SELECT DISTINCT
     CASE
         WHEN LOWER(TRIM(type_intervention)) LIKE '%peinture%' THEN 'peinture'
@@ -12,17 +14,18 @@ SELECT DISTINCT
         WHEN LOWER(TRIM(type_intervention)) LIKE '%redressage%' THEN 'redressage'
         WHEN LOWER(TRIM(type_intervention)) LIKE '%détartrage%' THEN 'détartrage'
         ELSE NULL
-    END
+    END AS type_intervention_corrigee
 FROM staging.interventions
+) 
 WHERE
-    type_intervention IS NOT NULL;
+    type_intervention_corrigee IS NOT NULL; -- Thibault: Cette ligne sert à rien, les type_intervention NULL seraient ELSE donc NULL
 
 SELECT DISTINCT
     CASE
         WHEN LOWER(TRIM(statut_signalement)) LIKE '%fait%' THEN 'fait'
         WHEN LOWER(TRIM(statut_signalement)) LIKE '%en attente %' THEN 'en attente'
         WHEN LOWER(TRIM(statut_signalement)) LIKE '%en cours%' THEN 'en cours'
-        WHEN LOWER(TRIM(statut_signalement)) LIKE '%NULL%' THEN 'non traité'
+        WHEN LOWER(TRIM(statut_signalement)) IS NULL THEN 'non traité' -- Thibault: ça va pas marcher, Excel n'écrit pas NULL quand c'est vide
         ELSE NULL
     END
 FROM staging.signalements
@@ -33,15 +36,16 @@ SELECT DISTINCT
     CASE
         WHEN LOWER(TRIM(urgence_signalement)) LIKE '%normal%' THEN 'normal'
         WHEN LOWER(TRIM(urgence_signalement)) LIKE '%urgent%' THEN 'urgent'
-        WHEN LOWER(TRIM(urgence_signalement)) LIKE '%NULL%' THEN 'non spécifié'
-        ELSE NULL
+        --WHEN LOWER(TRIM(urgence_signalement)) LIKE '%NULL%' THEN 'non spécifié' -- Thibault: ça va pas marcher, Excel n'écrit pas NULL quand c'est vide
+        ELSE 'non spécifié'-- Thibault: Mettre ELSE THEN 'non spécifié'
     END
 FROM staging.signalements
 WHERE
     urgence_signalement IS NOT NULL;
 
-SELECT DISTINCT
-    CASE
+-- Thibault: Cette table empêche les objets inventaire d'être dans d'autres lieux que ceux-ci
+/*SELECT DISTINCT
+CASE
         WHEN LOWER(TRIM(lieux_inventaire)) IN (
             'avenue de la gare',
             'avenuede la gare',
@@ -79,10 +83,11 @@ SELECT DISTINCT
 FROM staging.inventaire_mobilier
 WHERE
     lieux_inventaire IS NOT NULL
-    AND TRIM(lieux_inventaire) <> '';
+    AND TRIM(lieux_inventaire) <> ''; */
 --pas sur
 
 --IN c'est mieux que like?
+-- Thibault: IN pour vérifier qu'un élément est dans un liste, LIKE pour voir si un élément égale, commence, finit par le mot
 
 SELECT DISTINCT
     CASE
@@ -111,7 +116,7 @@ SELECT DISTINCT
         WHEN LOWER(TRIM(type_inventaire)) LIKE '%borne EV%' THEN 'borne recharge'
         WHEN LOWER(TRIM(type_inventaire)) LIKE '%borne recharge%' THEN 'borne recharge'
         WHEN LOWER(TRIM(type_inventaire)) LIKE '%borne recharge EV%' THEN 'borne recharge'
-        -- on c fait chier ou pas ? estce que borne comprends toutes les bornes de base?
+        -- on c fait chier ou pas ? estce que borne comprends toutes les bornes de base? -- Thibault: oui avec les %
         WHEN LOWER(TRIM(type_inventaire)) LIKE '%panneau%' THEN 'panneau'
         WHEN LOWER(TRIM(type_inventaire)) LIKE '%panneau info%' THEN 'panneau'
         WHEN LOWER(TRIM(type_inventaire)) LIKE '%panneau affichage%' THEN 'panneau'
@@ -131,8 +136,8 @@ SELECT DISTINCT
         WHEN LOWER(TRIM(materiaux_inventaire)) LIKE '%beton%' THEN 'béton'
         WHEN LOWER(TRIM(materiaux_inventaire)) LIKE '%LED%' THEN 'LED'
         WHEN LOWER(TRIM(materiaux_inventaire)) LIKE '%sodium%' THEN 'sodium'
-        -- quand on a des champs vide comment on fait ?
-    END -- end as ? pourquoi il faut ?
+        -- quand on a des champs vide comment on fait ? -- Thibault: En laissant la possibilité de mettre null dans la colonne FK(materiaux_inventaire)
+    END -- end as ? pourquoi il faut ? -- Thibault: END AS = nom donné à cette colonne (qui contient bois, métal, etc...) -> indispensable pour insérer
 FROM staging.inventaire_mobilier
 WHERE
     materiaux_inventaire IS NOT NULL;
