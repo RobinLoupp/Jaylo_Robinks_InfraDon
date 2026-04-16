@@ -1,6 +1,7 @@
 -- Nettoyage table type_... les petites tables
 
 -- Thibault: Manque INSERT pour réellement insérer dans les tables finales
+INSERT INTO 
 SELECT * FROM (
 SELECT DISTINCT
     CASE
