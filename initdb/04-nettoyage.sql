@@ -18,30 +18,35 @@ SELECT DISTINCT
 FROM staging.interventions
 ) 
 WHERE
-    type_intervention_corrigee IS NOT NULL; -- Thibault: Cette ligne sert à rien, les type_intervention NULL seraient ELSE donc NULL
+    type_intervention_corrigee IS NOT NULL; 
 
+
+SELECT * FROM (    
 SELECT DISTINCT
     CASE
-        WHEN LOWER(TRIM(statut_signalement)) LIKE '%fait%' THEN 'fait'
-        WHEN LOWER(TRIM(statut_signalement)) LIKE '%en attente %' THEN 'en attente'
-        WHEN LOWER(TRIM(statut_signalement)) LIKE '%en cours%' THEN 'en cours'
-        WHEN LOWER(TRIM(statut_signalement)) IS NULL THEN 'non traité' -- Thibault: ça va pas marcher, Excel n'écrit pas NULL quand c'est vide
+        WHEN LOWER(TRIM(statut)) LIKE '%fait%' THEN 'fait'
+        WHEN LOWER(TRIM(statut)) LIKE '%en attente %' THEN 'en attente'
+        WHEN LOWER(TRIM(statut)) LIKE '%en cours%' THEN 'en cours'
+        WHEN LOWER(TRIM(statut)) IS NULL THEN 'non traité' 
         ELSE NULL
-    END
+    END AS statut_signalement_corrigee
 FROM staging.signalements
+)
 WHERE
-    statut_signalement IS NOT NULL;
+    statut_signalement_corrigee IS NOT NULL;
 
+
+SELECT * FROM (    
 SELECT DISTINCT
     CASE
-        WHEN LOWER(TRIM(urgence_signalement)) LIKE '%normal%' THEN 'normal'
-        WHEN LOWER(TRIM(urgence_signalement)) LIKE '%urgent%' THEN 'urgent'
-        --WHEN LOWER(TRIM(urgence_signalement)) LIKE '%NULL%' THEN 'non spécifié' -- Thibault: ça va pas marcher, Excel n'écrit pas NULL quand c'est vide
-        ELSE 'non spécifié'-- Thibault: Mettre ELSE THEN 'non spécifié'
-    END
+        WHEN LOWER(TRIM(urgence)) LIKE '%normal%' THEN 'normal'
+        WHEN LOWER(TRIM(urgence)) LIKE '%urgent%' THEN 'urgent'
+        ELSE 'non spécifié'
+    END AS urgence_signalement_corrigee
 FROM staging.signalements
+)
 WHERE
-    urgence_signalement IS NOT NULL;
+    urgence_signalement_corrigee IS NOT NULL;
 
 -- Thibault: Cette table empêche les objets inventaire d'être dans d'autres lieux que ceux-ci
 /*SELECT DISTINCT
@@ -89,69 +94,63 @@ WHERE
 --IN c'est mieux que like?
 -- Thibault: IN pour vérifier qu'un élément est dans un liste, LIKE pour voir si un élément égale, commence, finit par le mot
 
-SELECT DISTINCT
-    CASE
-        WHEN LOWER(TRIM(etat_inventaire)) LIKE '%bon%' THEN 'bon'
-        WHEN LOWER(TRIM(etat_inventaire)) LIKE '%usé %' THEN 'usé'
-        WHEN LOWER(TRIM(etat_inventaire)) LIKE '%à remplacer%' THEN 'à remplacer'
-        WHEN LOWER(TRIM(etat_inventaire)) LIKE '%NULL%' THEN 'non traité' --on laisse ou pas ?
-        ELSE NULL
-    END
-FROM staging.inventaire_mobilier
-WHERE
-    etat_inventaire IS NOT NULL;
 
+SELECT * FROM ( 
 SELECT DISTINCT
     CASE
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%banc%' THEN 'banc'
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%banc public %' THEN 'banc'
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%lampadaire%' THEN 'lampadaire'
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%lampadaire sodium%' THEN 'lampadaire'
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%lampadaire LED%' THEN 'lampadaire'
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%corbeille%' THEN 'poubelle'
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%poubelle%' THEN 'poubelle'
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%poubelle tri%' THEN 'poubelle tri'
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%fontaine%' THEN 'fontaine'
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%fontaine publique%' THEN 'fontaine'
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%borne EV%' THEN 'borne recharge'
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%borne recharge%' THEN 'borne recharge'
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%borne recharge EV%' THEN 'borne recharge'
+        WHEN LOWER(TRIM(etat)) LIKE '%bon%' THEN 'bon'
+        WHEN LOWER(TRIM(etat)) LIKE '%usé %' THEN 'usé'
+        WHEN LOWER(TRIM(etat)) LIKE '%à remplacer%' THEN 'à remplacer'
+        ELSE 'non spécifié'
+    END AS etat_inventaire_corrigee
+FROM staging.inventaire_mobilier
+)
+WHERE
+    etat_inventaire_corrigee IS NOT NULL;
+
+
+SELECT * FROM ( 
+SELECT DISTINCT
+    CASE
+        WHEN LOWER(TRIM(type)) LIKE '%banc%' THEN 'banc'
+        WHEN LOWER(TRIM(type)) LIKE '%banc public %' THEN 'banc'
+        WHEN LOWER(TRIM(type)) LIKE '%lampadaire%' THEN 'lampadaire'
+        WHEN LOWER(TRIM(type)) LIKE '%lampadaire sodium%' THEN 'lampadaire'
+        WHEN LOWER(TRIM(type)) LIKE '%lampadaire LED%' THEN 'lampadaire'
+        WHEN LOWER(TRIM(type)) LIKE '%corbeille%' THEN 'poubelle'
+        WHEN LOWER(TRIM(type)) LIKE '%poubelle%' THEN 'poubelle'
+        WHEN LOWER(TRIM(type)) LIKE '%poubelle tri%' THEN 'poubelle tri'
+        WHEN LOWER(TRIM(type)) LIKE '%fontaine%' THEN 'fontaine'
+        WHEN LOWER(TRIM(type)) LIKE '%fontaine publique%' THEN 'fontaine'
+        WHEN LOWER(TRIM(type)) LIKE '%borne EV%' THEN 'borne recharge'
+        WHEN LOWER(TRIM(type)) LIKE '%borne recharge%' THEN 'borne recharge'
+        WHEN LOWER(TRIM(type)) LIKE '%borne recharge EV%' THEN 'borne recharge'
         -- on c fait chier ou pas ? estce que borne comprends toutes les bornes de base? -- Thibault: oui avec les %
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%panneau%' THEN 'panneau'
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%panneau info%' THEN 'panneau'
-        WHEN LOWER(TRIM(type_inventaire)) LIKE '%panneau affichage%' THEN 'panneau'
-        ELSE NULL
-    END
+        WHEN LOWER(TRIM(type)) LIKE '%panneau%' THEN 'panneau'
+        WHEN LOWER(TRIM(type)) LIKE '%panneau info%' THEN 'panneau'
+        WHEN LOWER(TRIM(type)) LIKE '%panneau affichage%' THEN 'panneau'
+        ELSE 'non spécifié'
+    END AS type_inventaire_corrigee
 FROM staging.inventaire_mobilier
+)
 WHERE
-    type_inventaire IS NOT NULL;
+    type_inventaire_corrigee IS NOT NULL;
 
+
+SELECT * FROM ( 
 SELECT DISTINCT
     CASE
-        WHEN LOWER(TRIM(materiaux_inventaire)) LIKE '%bois%' THEN 'bois'
-        WHEN LOWER(TRIM(materiaux_inventaire)) LIKE '%métal %' THEN 'métal'
-        WHEN LOWER(TRIM(materiaux_inventaire)) LIKE '%metal%' THEN 'métal'
-        WHEN LOWER(TRIM(materiaux_inventaire)) LIKE '%pierre%' THEN 'pierre'
-        WHEN LOWER(TRIM(materiaux_inventaire)) LIKE '%béton%' THEN 'béton'
-        WHEN LOWER(TRIM(materiaux_inventaire)) LIKE '%beton%' THEN 'béton'
-        WHEN LOWER(TRIM(materiaux_inventaire)) LIKE '%LED%' THEN 'LED'
-        WHEN LOWER(TRIM(materiaux_inventaire)) LIKE '%sodium%' THEN 'sodium'
-        -- quand on a des champs vide comment on fait ? -- Thibault: En laissant la possibilité de mettre null dans la colonne FK(materiaux_inventaire)
-    END -- end as ? pourquoi il faut ? -- Thibault: END AS = nom donné à cette colonne (qui contient bois, métal, etc...) -> indispensable pour insérer
+        WHEN LOWER(TRIM(materiau)) LIKE '%bois%' THEN 'bois'
+        WHEN LOWER(TRIM(materiau)) LIKE '%métal %' THEN 'métal'
+        WHEN LOWER(TRIM(materiau)) LIKE '%metal%' THEN 'métal'
+        WHEN LOWER(TRIM(materiau)) LIKE '%pierre%' THEN 'pierre'
+        WHEN LOWER(TRIM(materiau)) LIKE '%béton%' THEN 'béton'
+        WHEN LOWER(TRIM(materiau)) LIKE '%beton%' THEN 'béton'
+        WHEN LOWER(TRIM(materiau)) LIKE '%LED%' THEN 'LED'
+        WHEN LOWER(TRIM(materiau)) LIKE '%sodium%' THEN 'sodium'
+    END AS materiaux_inventaire_corrigee
 FROM staging.inventaire_mobilier
+)
 WHERE
-    materiaux_inventaire IS NOT NULL;
+    materiaux_inventaire_corrigee IS NOT NULL;
 
-
-    SELECT DISTINCT
-    CASE
-        WHEN LOWER(TRIM(materiels_fournisseurs)) LIKE '%%' THEN ''
-        WHEN LOWER(TRIM(materiels_fournisseurs)) LIKE '%%' THEN ''
-        WHEN LOWER(TRIM(materiels_fournisseurs)) LIKE '%%' THEN ' '
-        ELSE NULL
-    END
-FROM staging.fournisseurs_contacts
-WHERE
-    materiels_fournisseurs IS NOT NULL;
-
-    -- ON SAIT PAS QUOI FAIRE ICI...
