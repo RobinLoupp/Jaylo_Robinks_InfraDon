@@ -95,7 +95,7 @@ CREATE TABLE inventaire (
 CREATE TABLE signalement (
     id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
-    signal_par VARCHAR(255),
+    signale_par VARCHAR(255),
     objet VARCHAR(255),
     description TEXT,
     id_statut_signalement INTEGER NOT NULL REFERENCES statut_signalement (id),
