@@ -1,7 +1,9 @@
+-- Active: 1772185782000@@127.0.0.1@5432@service_technique
+-- Active: 1776260001431@@localhost@5432
 -- Nettoyage table type_... les petites tables
 
 -- Thibault: Manque INSERT pour réellement insérer dans les tables finales
-INSERT INTO 
+INSERT INTO type_intervention (type_intervention)
 SELECT * FROM (
 SELECT DISTINCT
     CASE
@@ -22,6 +24,7 @@ WHERE
     type_intervention_corrigee IS NOT NULL; 
 
 
+INSERT INTO statut_signalement (statut)
 SELECT * FROM (    
 SELECT DISTINCT
     CASE
@@ -37,6 +40,7 @@ WHERE
     statut_signalement_corrigee IS NOT NULL;
 
 
+INSERT INTO urgence_signalement (statut)
 SELECT * FROM (    
 SELECT DISTINCT
     CASE
@@ -96,6 +100,7 @@ WHERE
 -- Thibault: IN pour vérifier qu'un élément est dans un liste, LIKE pour voir si un élément égale, commence, finit par le mot
 
 
+INSERT INTO etat_inventaire (etat)
 SELECT * FROM ( 
 SELECT DISTINCT
     CASE
@@ -110,6 +115,7 @@ WHERE
     etat_inventaire_corrigee IS NOT NULL;
 
 
+INSERT INTO type_inventaire (type)
 SELECT * FROM ( 
 SELECT DISTINCT
     CASE
@@ -137,7 +143,7 @@ FROM staging.inventaire_mobilier
 WHERE
     type_inventaire_corrigee IS NOT NULL;
 
-
+INSERT INTO materiaux_inventaire (type)
 SELECT * FROM ( 
 SELECT DISTINCT
     CASE
