@@ -1,3 +1,4 @@
+-- Active: 1776260001431@@localhost@5432
 --nettoyage des grandes tables 
 
 INSERT INTO intervention (
