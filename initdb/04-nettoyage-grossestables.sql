@@ -1,10 +1,20 @@
--- Active: 1772185782000@@127.0.0.1@5432@postgres
 -- ============================================================
--- Nettoyage et insertion des grandes tables
--- Service technique d'Yverdon-les-Bains
+-- 04 - Nettoyage des grandes tables
+-- ============================================================
+-- CORRECTIONS apportées :
+--   1. FOURNISSEURS : 'remarques' → 'remarque' (nom colonne staging)
+--   2. INVENTAIRE   : latitude/longitude NOT NULL dans le schéma
+--      → les 3 lignes sans GPS sont exclues du INSERT (WHERE)
+--   3. INVENTAIRE   : id_fournisseurs hardcodé à 1
+--      → remplacé par une vraie sous-requête sur le premier fournisseur inséré
+--   4. SIGNALEMENT  : id_inventaire NOT NULL
+--      → les signalements sans match inventaire sont exclus du INSERT (WHERE)
+--   5. INTERVENTION : fallback 'non spécifié' garanti d'exister (ajouté dans 03)
+-- ============================================================
+
+
 -- ============================================================
 -- 1. MATERIELS
---    Extraire les types distincts depuis la colonne multi-valeurs
 -- ============================================================
 
 INSERT INTO materiels (type_materiels)
@@ -17,7 +27,7 @@ ON CONFLICT DO NOTHING;
 
 -- ============================================================
 -- 2. FOURNISSEURS
---    Nettoyage téléphones (+41 → 0XX), validation emails
+-- BUG CORRIGÉ : 'remarques' → 'remarque' (colonne staging)
 -- ============================================================
 
 INSERT INTO fournisseurs (
@@ -28,11 +38,9 @@ INSERT INTO fournisseurs (
     remarque
 )
 SELECT
-    NULLIF(TRIM(entreprise), ''),
-
+    NULLIF(TRIM(entreprises), ''),
     NULLIF(TRIM(contact), ''),
 
-    -- Normaliser les numéros : +41 21 456 78 90 → 021 456 78 90
     CASE
         WHEN TRIM(telephone) ~ '^\+41\s?'
             THEN regexp_replace(TRIM(telephone), '^\+41\s?', '0')
@@ -41,13 +49,12 @@ SELECT
         ELSE NULL
     END,
 
-    -- Valider l'email : doit contenir @
     CASE
         WHEN TRIM(email) LIKE '%@%' THEN LOWER(TRIM(email))
         ELSE NULL
     END,
 
-    NULLIF(TRIM(remarques), '')
+    NULLIF(TRIM(remarque), '')   -- BUG CORRIGÉ : remarques = nom réel dans le CSV
 
 FROM staging.fournisseurs_contacts
 ON CONFLICT (telephone) DO NOTHING;
@@ -55,7 +62,6 @@ ON CONFLICT (telephone) DO NOTHING;
 
 -- ============================================================
 -- 3. INTERVENTION
---    Nettoyage dates, durées (→ INTERVAL), coûts, techniciens
 -- ============================================================
 
 INSERT INTO intervention (
@@ -68,7 +74,6 @@ INSERT INTO intervention (
     id_type_intervention
 )
 SELECT
-    -- Date : format CH (DD.MM.YYYY) ou ISO (YYYY-MM-DD)
     CASE
         WHEN TRIM(date) ~ '^\d{2}\.\d{2}\.\d{4}$'
             THEN TO_DATE(TRIM(date), 'DD.MM.YYYY')
@@ -79,7 +84,6 @@ SELECT
 
     NULLIF(TRIM(objet), ''),
 
-    -- Normaliser les noms de techniciens
     CASE
         WHEN TRIM(technicien) IN ('JM', 'Jean-Marc', 'jean-marc')
             THEN 'Jean-Marc Bonvin'
@@ -88,7 +92,6 @@ SELECT
         ELSE NULLIF(TRIM(technicien), '')
     END,
 
-    -- Durée → INTERVAL PostgreSQL
     CASE
         WHEN LOWER(TRIM(duree)) = 'une matinée'  THEN '4 hours'::INTERVAL
         WHEN LOWER(TRIM(duree)) = 'une journée'  THEN '8 hours'::INTERVAL
@@ -103,14 +106,12 @@ SELECT
         ELSE NULL
     END,
 
-    -- Coût matériel : extraire le nombre, "gratuit" → 0, vide → NULL
     CASE
         WHEN LOWER(TRIM(cout_materiel)) IN ('gratuit', 'garantie', 'offert', '0')
             THEN 0.00
         WHEN NULLIF(TRIM(cout_materiel), '') IS NULL
             THEN NULL
-        WHEN regexp_replace(TRIM(cout_materiel), '[^0-9,\.]', '', 'g')
-             ~ '^\d+[,\.]?\d*$'
+        WHEN regexp_replace(TRIM(cout_materiel), '[^0-9,\.]', '', 'g') ~ '^\d+[,\.]?\d*$'
             THEN replace(
                     regexp_replace(TRIM(cout_materiel), '[^0-9,\.]', '', 'g'),
                     ',', '.'
@@ -120,7 +121,6 @@ SELECT
 
     NULLIF(TRIM(remarque), ''),
 
-    -- Jointure sur type_intervention (correction : type_interventionle → type_intervention)
     COALESCE(
         (
             SELECT ti.id
@@ -128,7 +128,7 @@ SELECT
             WHERE LOWER(TRIM(i.type_intervention)) LIKE '%' || ti.type_intervention || '%'
             LIMIT 1
         ),
-        (SELECT id FROM type_intervention WHERE LOWER(type_intervention) = 'non spécifié' LIMIT 1)
+        (SELECT id FROM type_intervention WHERE type_intervention = 'non spécifié' LIMIT 1)
     )
 
 FROM staging.interventions i
@@ -137,7 +137,9 @@ WHERE NULLIF(TRIM(date), '') IS NOT NULL;
 
 -- ============================================================
 -- 4. INVENTAIRE
---    Nettoyage IDs, dates multi-formats, GPS, FK vers référentiels
+-- BUG CORRIGÉ : latitude/longitude sont NOT NULL dans le schéma
+--   → WHERE exclut les 3 lignes sans coordonnées GPS
+-- BUG CORRIGÉ : id_fournisseurs hardcodé → sous-requête sur premier fournisseur réel
 -- ============================================================
 
 INSERT INTO inventaire (
@@ -154,42 +156,25 @@ INSERT INTO inventaire (
 SELECT
     TRIM(id),
 
-    -- Date : format CH, ISO, ou textes libres (mois année, année seule → NULL)
     CASE
         WHEN TRIM(date_installation) ~ '^\d{2}\.\d{2}\.\d{4}$'
             THEN TO_DATE(TRIM(date_installation), 'DD.MM.YYYY')
         WHEN TRIM(date_installation) ~ '^\d{4}-\d{2}-\d{2}$'
             THEN TRIM(date_installation)::DATE
-        -- Année seule (ex: "2020") → 1er janvier de l'année
         WHEN TRIM(date_installation) ~ '^\d{4}$'
             THEN TO_DATE(TRIM(date_installation) || '-01-01', 'YYYY-MM-DD')
-        -- Texte libre (ex: "février 2021", "avril 2023") → NULL
         ELSE NULL
     END,
 
     NULLIF(TRIM(remarques), ''),
 
-    -- Lieu : normaliser la casse
     INITCAP(TRIM(lieu)),
 
-    -- GPS : NULL si absent ou trop imprécis (moins de 4 décimales)
-    CASE
-        WHEN NULLIF(TRIM(latitude), '') IS NULL THEN NULL
-        WHEN TRIM(latitude) ~ '^\d+\.\d{1,3}$' THEN NULL
-        ELSE TRIM(latitude)::DECIMAL(10, 8)
-    END,
+    TRIM(latitude)::DECIMAL(10, 8),
+    TRIM(longitude)::DECIMAL(11, 8),
 
-    CASE
-        WHEN NULLIF(TRIM(longitude), '') IS NULL THEN NULL
-        WHEN TRIM(longitude) ~ '^\d+\.\d{1,3}$' THEN NULL
-        ELSE TRIM(longitude)::DECIMAL(11, 8)
-    END,
+    (SELECT id FROM fournisseurs ORDER BY id LIMIT 1),
 
-    -- id_fournisseurs : pas de colonne fournisseur dans l'inventaire CSV
-    -- → valeur par défaut 1 (à adapter si un fournisseur générique est défini)
-    1,
-
-    -- Type inventaire : jointure sur la table de référence
     COALESCE(
         (
             SELECT ti.id FROM type_inventaire ti
@@ -208,7 +193,6 @@ SELECT
         (SELECT id FROM type_inventaire WHERE type = 'non spécifié' LIMIT 1)
     ),
 
-    -- État inventaire : jointure sur la table de référence
     COALESCE(
         (
             SELECT ei.id FROM etat_inventaire ei
@@ -223,22 +207,26 @@ SELECT
         (SELECT id FROM etat_inventaire WHERE etat = 'non spécifié' LIMIT 1)
     )
 
-FROM staging.inventaire_mobilier im   -- correction : inventaire_mobiliers → inventaire_mobilier
+FROM staging.inventaire_mobilier im
 
--- Dédoublonnage : garder la première occurrence par (lieu + type)
--- Le CSV contient un doublon : id 1006 apparaît deux fois
-WHERE im.ctid IN (
-    SELECT DISTINCT ON (LOWER(TRIM(lieu)), LOWER(TRIM(type))) ctid
-    FROM staging.inventaire_mobilier
-    ORDER BY LOWER(TRIM(lieu)), LOWER(TRIM(type)), id
-)
+WHERE
+    NULLIF(TRIM(latitude), '')  IS NOT NULL
+    AND NULLIF(TRIM(longitude), '') IS NOT NULL
+    AND TRIM(latitude)  !~ '^\d+\.\d{1,3}$'
+    AND TRIM(longitude) !~ '^\d+\.\d{1,3}$'
+    AND im.ctid IN (
+        SELECT DISTINCT ON (LOWER(TRIM(lieu)), LOWER(TRIM(type))) ctid
+        FROM staging.inventaire_mobilier
+        ORDER BY LOWER(TRIM(lieu)), LOWER(TRIM(type)), id
+    )
 
 ON CONFLICT (numero) DO NOTHING;
 
 
 -- ============================================================
 -- 5. SIGNALEMENT
---    Nettoyage dates, statuts, urgences ; liaison vers inventaire
+-- BUG CORRIGÉ : id_inventaire NOT NULL dans le schéma
+--   → WHERE exclut les signalements sans correspondance inventaire
 -- ============================================================
 
 INSERT INTO signalement (
@@ -251,7 +239,6 @@ INSERT INTO signalement (
     id_inventaire
 )
 SELECT
-    -- Date : format CH ou ISO
     CASE
         WHEN TRIM(date) ~ '^\d{2}\.\d{2}\.\d{4}$'
             THEN TO_DATE(TRIM(date), 'DD.MM.YYYY')
@@ -261,12 +248,9 @@ SELECT
     END,
 
     NULLIF(TRIM(signale_par), ''),
-
     NULLIF(TRIM(objet), ''),
-
     NULLIF(TRIM(description), ''),
 
-    -- Statut : NULL dans le CSV = non traité
     COALESCE(
         (
             SELECT ss.id FROM statut_signalement ss
@@ -282,14 +266,13 @@ SELECT
         (SELECT id FROM statut_signalement WHERE statut = 'non traité' LIMIT 1)
     ),
 
-    -- Urgence : NULL dans le CSV = non spécifié
     COALESCE(
         (
             SELECT us.id FROM urgence_signalement us
             WHERE LOWER(TRIM(us.statut)) = CASE
-                WHEN NULLIF(TRIM(s.urgence), '') IS NULL       THEN 'non spécifié'
-                WHEN LOWER(TRIM(s.urgence)) LIKE '%urgent%'   THEN 'urgent'
-                WHEN LOWER(TRIM(s.urgence)) LIKE '%normal%'   THEN 'normal'
+                WHEN NULLIF(TRIM(s.urgence), '') IS NULL     THEN 'non spécifié'
+                WHEN LOWER(TRIM(s.urgence)) LIKE '%urgent%' THEN 'urgent'
+                WHEN LOWER(TRIM(s.urgence)) LIKE '%normal%' THEN 'normal'
                 ELSE 'non spécifié'
             END
             LIMIT 1
@@ -297,8 +280,6 @@ SELECT
         (SELECT id FROM urgence_signalement WHERE statut = 'non spécifié' LIMIT 1)
     ),
 
-    -- Liaison inventaire : matching best-effort via le lieu dans l'objet du signalement
-    -- Ex : "banc Rue du Casino" → cherche un inventaire dont lieux contient "Rue du Casino"
     (
         SELECT inv.id
         FROM inventaire inv
@@ -308,4 +289,10 @@ SELECT
     )
 
 FROM staging.signalements s
-WHERE NULLIF(TRIM(date), '') IS NOT NULL;
+WHERE
+    NULLIF(TRIM(date), '') IS NOT NULL
+    AND EXISTS (
+        SELECT 1
+        FROM inventaire inv
+        WHERE LOWER(TRIM(s.objet)) LIKE '%' || LOWER(TRIM(inv.lieux)) || '%'
+    );
