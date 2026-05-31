@@ -1,4 +1,4 @@
--- Active: 1772185782000@@127.0.0.1@5432@service_technique
+-- Active: 1775727990562@@127.0.0.1@5432@service_technique
 -- Créer un schéma dédié pour la staging
 CREATE SCHEMA IF NOT EXISTS staging;
 

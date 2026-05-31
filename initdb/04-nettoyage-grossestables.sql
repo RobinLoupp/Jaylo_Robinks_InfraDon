@@ -38,7 +38,7 @@ INSERT INTO fournisseurs (
     remarque
 )
 SELECT
-    NULLIF(TRIM(entreprises), ''),
+    NULLIF(TRIM(entreprise), ''),
     NULLIF(TRIM(contact), ''),
 
     CASE
@@ -63,6 +63,10 @@ ON CONFLICT (telephone) DO NOTHING;
 -- ============================================================
 -- 3. INTERVENTION
 -- ============================================================
+
+INSERT INTO type_intervention (type_intervention)
+VALUES ('non spécifié')
+ON CONFLICT DO NOTHING;
 
 INSERT INTO intervention (
     date,
