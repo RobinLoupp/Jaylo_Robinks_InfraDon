@@ -1,12 +1,7 @@
--- ============================================================
--- 07 - Nettoyage des tables de liaison
--- Service technique d'Yverdon-les-Bains
--- ============================================================
--- 1. FOURNISSEURS_MATERIELS
--- La colonne type_materiel du CSV contient plusieurs valeurs
--- séparées par virgule : "bancs, poubelles", "lampadaires, éclairage LED"
--- On éclate chaque valeur et on joint sur les deux tables finales.
--- ============================================================
+
+-- 07 Nettoyage des tables de liaison
+
+-- 1 FOURNISSEURS_MATERIELS
 
 INSERT INTO fournisseurs_materiels (id_fournisseurs, id_materiels)
 SELECT DISTINCT
@@ -33,10 +28,7 @@ JOIN materiels m
 ON CONFLICT DO NOTHING;
 
 
--- ============================================================
 -- 2. SIGNALEMENT_INTERVENTION
-
--- ============================================================
 
 INSERT INTO signalement_intervention (id_signalement, id_intervention)
 SELECT DISTINCT

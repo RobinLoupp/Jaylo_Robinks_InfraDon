@@ -1,21 +1,9 @@
--- ============================================================
+
 -- 04 - Nettoyage des grandes tables
--- ============================================================
--- CORRECTIONS apportées :
---   1. FOURNISSEURS : 'remarques' → 'remarque' (nom colonne staging)
---   2. INVENTAIRE   : latitude/longitude NOT NULL dans le schéma
---      → les 3 lignes sans GPS sont exclues du INSERT (WHERE)
---   3. INVENTAIRE   : id_fournisseurs hardcodé à 1
---      → remplacé par une vraie sous-requête sur le premier fournisseur inséré
---   4. SIGNALEMENT  : id_inventaire NOT NULL
---      → les signalements sans match inventaire sont exclus du INSERT (WHERE)
---   5. INTERVENTION : fallback 'non spécifié' garanti d'exister (ajouté dans 03)
--- ============================================================
 
 
--- ============================================================
+
 -- 1. MATERIELS
--- ============================================================
 
 INSERT INTO materiels (type_materiels)
 SELECT DISTINCT TRIM(valeur)
@@ -25,10 +13,8 @@ WHERE TRIM(valeur) <> ''
 ON CONFLICT DO NOTHING;
 
 
--- ============================================================
+
 -- 2. FOURNISSEURS
--- BUG CORRIGÉ : 'remarques' → 'remarque' (colonne staging)
--- ============================================================
 
 INSERT INTO fournisseurs (
     entreprises,
@@ -54,15 +40,13 @@ SELECT
         ELSE NULL
     END,
 
-    NULLIF(TRIM(remarque), '')   -- BUG CORRIGÉ : remarques = nom réel dans le CSV
+    NULLIF(TRIM(remarque), '')   
 
 FROM staging.fournisseurs_contacts
 ON CONFLICT (telephone) DO NOTHING;
 
 
--- ============================================================
 -- 3. INTERVENTION
--- ============================================================
 
 INSERT INTO type_intervention (type_intervention)
 VALUES ('non spécifié')
@@ -139,12 +123,10 @@ FROM staging.interventions i
 WHERE NULLIF(TRIM(date), '') IS NOT NULL;
 
 
--- ============================================================
 -- 4. INVENTAIRE
 -- BUG CORRIGÉ : latitude/longitude sont NOT NULL dans le schéma
 --   → WHERE exclut les 3 lignes sans coordonnées GPS
 -- BUG CORRIGÉ : id_fournisseurs hardcodé → sous-requête sur premier fournisseur réel
--- ============================================================
 
 INSERT INTO inventaire (
     numero,
@@ -227,11 +209,7 @@ WHERE
 ON CONFLICT (numero) DO NOTHING;
 
 
--- ============================================================
 -- 5. SIGNALEMENT
--- BUG CORRIGÉ : id_inventaire NOT NULL dans le schéma
---   → WHERE exclut les signalements sans correspondance inventaire
--- ============================================================
 
 INSERT INTO signalement (
     date,
