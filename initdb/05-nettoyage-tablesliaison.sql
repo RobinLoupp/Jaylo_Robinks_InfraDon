@@ -14,18 +14,18 @@ SELECT DISTINCT
     m.id
 FROM staging.fournisseurs_contacts src
 
--- Éclater la colonne multi-valeurs en lignes individuelles
+
 CROSS JOIN LATERAL (
     SELECT TRIM(valeur) AS type_mat
     FROM unnest(string_to_array(src.type_materiel, ',')) AS valeur
     WHERE TRIM(valeur) <> ''
 ) AS mat_eclate
 
--- Joindre sur le fournisseur nettoyé
+
 JOIN fournisseurs f
     ON LOWER(TRIM(f.entreprises)) = LOWER(TRIM(src.entreprise))
 
--- Joindre sur le matériel nettoyé (matching souple)
+
 JOIN materiels m
     ON LOWER(TRIM(m.type_materiels)) LIKE '%' || LOWER(mat_eclate.type_mat) || '%'
     OR LOWER(mat_eclate.type_mat) LIKE '%' || LOWER(TRIM(m.type_materiels)) || '%'
@@ -45,8 +45,7 @@ SELECT DISTINCT
 FROM signalement s
 JOIN intervention i
     ON (
-        -- Condition 1 : même lieu mentionné dans les deux objets
-        -- On extrait les mots-clés de lieu communs (>= 3 caractères)
+
         EXISTS (
             SELECT 1
             FROM unnest(
@@ -61,7 +60,7 @@ JOIN intervention i
                   'lampadaire', 'fontaine', 'borne', 'panneau', 'poubelle'
               )
         )
-        -- Condition 2 : même type de mobilier
+
         AND (
             (LOWER(s.objet) LIKE '%banc%'       AND LOWER(i.objet) LIKE '%banc%')
          OR (LOWER(s.objet) LIKE '%lampadaire%' AND LOWER(i.objet) LIKE '%lampadaire%')
@@ -71,7 +70,7 @@ JOIN intervention i
          OR (LOWER(s.objet) LIKE '%borne%'      AND LOWER(i.objet) LIKE '%borne%')
          OR (LOWER(s.objet) LIKE '%panneau%'    AND LOWER(i.objet) LIKE '%panneau%')
         )
-        -- Condition 3 : intervention dans les 90 jours qui suivent le signalement
+
         AND i.date >= s.date
         AND i.date <= s.date + INTERVAL '90 days'
     )

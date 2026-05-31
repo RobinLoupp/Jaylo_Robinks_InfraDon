@@ -21,7 +21,8 @@ SELECT DISTINCT
 FROM staging.interventions
 ) 
 WHERE
-    type_intervention_corrigee IS NOT NULL; 
+    type_intervention_corrigee IS NOT NULL
+    AND type_intervention_corrigee NOT IN (SELECT type_intervention FROM type_intervention);
 
 
 INSERT INTO statut_signalement (statut)
